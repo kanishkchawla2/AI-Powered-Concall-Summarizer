@@ -1,4 +1,4 @@
-# Stock Analysis Pipeline 📊
+# AI Powered Concall Summarizer 📊
 
 A comprehensive Python-based pipeline that automates the process of gathering, analyzing, and summarizing stock earnings call transcripts using AI-powered insights.
 
