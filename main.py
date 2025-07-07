@@ -13,14 +13,26 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 import google.generativeai as genai
+import random
+import glob
+from tqdm import tqdm
 
 
 class StockAnalysisPipeline:
-    def __init__(self, gemini_api_key):
+    def __init__(self, gemini_api_keys):
         """Initialize the pipeline with configurations"""
-        # Gemini setup
-        genai.configure(api_key=gemini_api_key)
-        self.model = genai.GenerativeModel("gemini-2.5-flash-lite-preview-06-17")
+        # API Key management - accept list of API keys
+        if isinstance(gemini_api_keys, str):
+            self.api_keys = [gemini_api_keys]
+        else:
+            self.api_keys = gemini_api_keys
+
+        self.current_key_index = 0
+        self.stocks_processed = 0
+        self.stocks_per_key = 15
+
+        # Initialize Gemini with first API key
+        self._configure_gemini()
 
         # Load selected stocks
         self.selected_stocks_df = pd.read_excel("stock_list.xlsx")
@@ -29,59 +41,59 @@ class StockAnalysisPipeline:
         # Keywords for extraction
         self.keywords = [
             # Financial performance
-        "revenue", "topline", "bottomline", "EBITDA", "EBIT", "PAT", "net profit",
-        "gross margin", "margins", "operating leverage", "cost pressure", "input cost",
-        "realization", "pricing power", "price hike", "discounting",
+            "revenue", "topline", "bottomline", "EBITDA", "EBIT", "PAT", "net profit",
+            "gross margin", "margins", "operating leverage", "cost pressure", "input cost",
+            "realization", "pricing power", "price hike", "discounting",
 
-    # Costs & efficiency
-        "raw material", "RM cost", "energy cost", "power cost", "gas prices",
-        "opex", "cost optimization", "efficiency", "productivity", "cost leadership",
+            # Costs & efficiency
+            "raw material", "RM cost", "energy cost", "power cost", "gas prices",
+            "opex", "cost optimization", "efficiency", "productivity", "cost leadership",
 
-    # Capex & expansion
-        "capex", "expansion", "capacity utilization", "commissioning",
-        "greenfield", "brownfield", "debottlenecking", "backward integration",
+            # Capex & expansion
+            "capex", "expansion", "capacity utilization", "commissioning",
+            "greenfield", "brownfield", "debottlenecking", "backward integration",
 
-    # Liquidity & balance sheet
-        "free cash flow", "working capital", "cash conversion",
-        "net debt", "debt reduction", "interest coverage", "leverage", "finance cost",
-        "capital adequacy", "collections", "disbursement",
+            # Liquidity & balance sheet
+            "free cash flow", "working capital", "cash conversion",
+            "net debt", "debt reduction", "interest coverage", "leverage", "finance cost",
+            "capital adequacy", "collections", "disbursement",
 
-    # Ratios
-        "ROCE", "ROE", "asset turnover", "inventory days", "receivable days", "payable days",
+            # Ratios
+            "ROCE", "ROE", "asset turnover", "inventory days", "receivable days", "payable days",
 
-    # Business drivers
-        "demand", "volume growth", "product mix", "premiumization",
-        "channel mix", "SKU", "new launch", "market share",
-        "domestic", "exports", "geo mix", "international business",
+            # Business drivers
+            "demand", "volume growth", "product mix", "premiumization",
+            "channel mix", "SKU", "new launch", "market share",
+            "domestic", "exports", "geo mix", "international business",
 
-    # Seasonality & cycles
-        "festive season", "wedding season", "monsoon",
-        "seasonality", "inventory build-up", "destocking", "restocking", "inventory correction",
+            # Seasonality & cycles
+            "festive season", "wedding season", "monsoon",
+            "seasonality", "inventory build-up", "destocking", "restocking", "inventory correction",
 
-    # Macro & regulatory
-        "headwinds", "tailwinds", "macro uncertainty", "regulatory environment",
-        "GST", "budget impact", "PLI", "FAME", "subsidy", "tax rate", "duty impact", "customs",
+            # Macro & regulatory
+            "headwinds", "tailwinds", "macro uncertainty", "regulatory environment",
+            "GST", "budget impact", "PLI", "FAME", "subsidy", "tax rate", "duty impact", "customs",
 
-    # Management tone & outlook
-        "guidance", "outlook", "visibility", "confident", "cautious", "optimistic",
-        "conservative", "hopeful", "strong growth", "muted", "rebound", "softness",
-        "moderation", "volatility", "stability",
+            # Management tone & outlook
+            "guidance", "outlook", "visibility", "confident", "cautious", "optimistic",
+            "conservative", "hopeful", "strong growth", "muted", "rebound", "softness",
+            "moderation", "volatility", "stability",
 
-    # Supply chain & execution
-        "supply chain", "logistics", "freight cost", "warehousing",
-        "sourcing", "import substitution", "supply constraints", "project delays",
+            # Supply chain & execution
+            "supply chain", "logistics", "freight cost", "warehousing",
+            "sourcing", "import substitution", "supply constraints", "project delays",
 
-    # Corporate actions
-        "promoter holding", "pledge", "buyback", "dividend payout", "shareholding",
+            # Corporate actions
+            "promoter holding", "pledge", "buyback", "dividend payout", "shareholding",
 
-    # Tech, ESG, innovation
-        "AI adoption", "EV transition", "sustainability", "ESG", "carbon footprint",
-        "green initiatives", "R&D", "innovation", "automation", "digital transformation",
-        "cybersecurity", "cloud adoption", "patents", "benchmarking",
+            # Tech, ESG, innovation
+            "AI adoption", "EV transition", "sustainability", "ESG", "carbon footprint",
+            "green initiatives", "R&D", "innovation", "automation", "digital transformation",
+            "cybersecurity", "cloud adoption", "patents", "benchmarking",
 
-    # Workforce & delivery
-        "attrition", "hiring", "utilization", "offshore", "onsite",
-        "subcontracting", "bench", "billed effort"
+            # Workforce & delivery
+            "attrition", "hiring", "utilization", "offshore", "onsite",
+            "subcontracting", "bench", "billed effort"
         ]
 
         # Configuration
@@ -103,11 +115,30 @@ class StockAnalysisPipeline:
             "Try to segregate quarters in each pointer."
         )
 
-    def fetch_transcripts(self, stock_code, max_links=4):
+    def _configure_gemini(self):
+        """Configure Gemini with current API key"""
+        current_key = self.api_keys[self.current_key_index]
+        genai.configure(api_key=current_key)
+        self.model = genai.GenerativeModel("gemini-2.5-flash-lite-preview-06-17")
+        print(f"🔑 Using API key {self.current_key_index + 1}/{len(self.api_keys)}")
+
+    def _check_and_rotate_key(self):
+        """Check if need to rotate API key and rotate if necessary"""
+        if self.stocks_processed > 0 and self.stocks_processed % self.stocks_per_key == 0:
+            self.current_key_index = (self.current_key_index + 1) % len(self.api_keys)
+            self._configure_gemini()
+            print(
+                f"🔄 Rotated to API key {self.current_key_index + 1}/{len(self.api_keys)} after {self.stocks_processed} stocks")
+
+    def fetch_transcripts(self, stock_code, max_links=4, driver=None):
         """Step 1: Scrape transcript links for a stock"""
-        options = webdriver.ChromeOptions()
-        options.add_argument("--headless")
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+        if driver is None:
+            options = webdriver.ChromeOptions()
+            options.add_argument("--headless")
+            driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+            driver_created = True
+        else:
+            driver_created = False
 
         results = []
 
@@ -140,7 +171,8 @@ class StockAnalysisPipeline:
             print(f"✅ {len(results)} transcripts found for {stock_code}")
 
         finally:
-            driver.quit()
+            if driver_created:
+                driver.quit()
 
         return results
 
@@ -189,16 +221,23 @@ class StockAnalysisPipeline:
         """Step 2: Extract keywords from transcript URLs"""
         all_keyword_data = []
 
-        for stock_group in transcript_data:
+        # Progress bar for analyzing transcript URLs
+        pbar_stocks = tqdm(transcript_data, desc="📊 Analyzing stocks", unit="stock")
+
+        for stock_group in pbar_stocks:
             stock_name = stock_group[0]['Stock']
-            print(f"\n📈 Analyzing keywords for: {stock_name}")
+            pbar_stocks.set_description(f"📊 Analyzing {stock_name}")
 
             file_cols = [f"File {i + 1}" for i in range(len(stock_group))]
             summary_table = pd.DataFrame(index=self.keywords, columns=file_cols).fillna("")
 
-            for idx, transcript in enumerate(stock_group):
+            # Progress bar for processing transcripts within each stock
+            pbar_transcripts = tqdm(stock_group, desc=f"🌐 Processing {stock_name} transcripts",
+                                    unit="transcript", leave=False)
+
+            for idx, transcript in enumerate(pbar_transcripts):
                 url = transcript['URL']
-                print(f"🌐 Fetching: {url}")
+                pbar_transcripts.set_description(f"🌐 Fetching {stock_name} transcript {idx + 1}")
 
                 try:
                     if url.endswith(".pdf"):
@@ -223,7 +262,19 @@ class StockAnalysisPipeline:
                     print(f"📄 First 500 chars of text from {url}:")
                     print(full_text[:500])
 
-                    kw_matches = self.filter_keywords(full_text)
+                    # Progress bar for keyword filtering
+                    kw_matches = {}
+                    pbar_keywords = tqdm(self.keywords, desc=f"🔍 Filtering keywords for {stock_name}",
+                                         unit="keyword", leave=False)
+
+                    for kw in pbar_keywords:
+                        pbar_keywords.set_description(f"🔍 Checking '{kw}' in {stock_name}")
+                        matches = self.extract_keyword_context(full_text.lower(), kw)
+                        if matches:
+                            kw_matches[kw] = matches[:2]  # limit to first 2
+
+                    pbar_keywords.close()
+
                     for kw, snippets in kw_matches.items():
                         preview = " | ".join(snippets)
                         if summary_table.loc[kw, file_cols[idx]]:
@@ -234,19 +285,29 @@ class StockAnalysisPipeline:
                 except Exception as e:
                     print(f"⚠️ Error fetching {url}: {e}")
 
+            pbar_transcripts.close()
+
             summary_table = summary_table.fillna("-")
             summary_table = summary_table.reset_index()
             summary_table["Stock"] = stock_name
             all_keyword_data.append(summary_table)
 
+        pbar_stocks.close()
         return pd.concat(all_keyword_data, ignore_index=True) if all_keyword_data else pd.DataFrame()
 
     def generate_summaries(self, keyword_df):
-        """Step 3: Generate summaries using Gemini"""
+        """Step 3: Generate summaries using Gemini with API key rotation"""
         summaries = []
+        unique_stocks = keyword_df["Stock"].unique()
 
-        for stock in keyword_df["Stock"].unique():
-            print(f"\n🤖 Generating summary for: {stock}")
+        # Progress bar for generating summaries
+        pbar_summaries = tqdm(unique_stocks, desc="🤖 Generating summaries", unit="stock")
+
+        for stock in pbar_summaries:
+            # Check and rotate API key if needed
+            self._check_and_rotate_key()
+
+            pbar_summaries.set_description(f"🤖 Generating summary for {stock}")
             stock_df = keyword_df[keyword_df["Stock"] == stock]
 
             # Create context from keywords and matching text
@@ -277,68 +338,117 @@ class StockAnalysisPipeline:
                     else:
                         summaries.append({"Stock": stock, "Summary": f"ERROR: {e}"})
 
+            # Increment stocks processed counter
+            self.stocks_processed += 1
             time.sleep(0.5)  # Normal delay
 
+        pbar_summaries.close()
         return pd.DataFrame(summaries)
 
     def run_pipeline(self, max_docs_per_stock=4, save_intermediates=False):
         """Run the complete pipeline"""
         print("🚀 Starting Stock Analysis Pipeline...")
+        print(f"📊 Total API keys available: {len(self.api_keys)}")
+        print(f"🔄 Will rotate every {self.stocks_per_key} stocks")
         print("=" * 50)
 
-        # Step 1: Scrape transcript links
+        # Step 1: Scrape transcript links in batches of 60
         print("\n📋 STEP 1: Scraping transcript links...")
-        all_transcript_data = []
+        batch_size = 60
+        temp_files = []
 
-        for stock in self.selected_stock_list:
-            transcript_links = self.fetch_transcripts(stock, max_docs_per_stock)
-            if transcript_links:
-                all_transcript_data.append(transcript_links)
+        # Progress bar for batches
+        total_batches = (len(self.selected_stock_list) + batch_size - 1) // batch_size
+        pbar_batches = tqdm(range(0, len(self.selected_stock_list), batch_size),
+                            desc="📦 Processing batches", unit="batch", total=total_batches)
 
-        if not all_transcript_data:
-            print("❌ No transcript links found. Exiting pipeline.")
-            return None
+        for batch_start in pbar_batches:
+            batch_stocks = self.selected_stock_list[batch_start: batch_start + batch_size]
+            batch_num = batch_start // batch_size + 1
+            pbar_batches.set_description(f"📦 Processing batch {batch_num}/{total_batches}")
 
-        # Optional: Save transcript links
-        if save_intermediates:
-            all_links_df = pd.concat([pd.DataFrame(group) for group in all_transcript_data], ignore_index=True)
-            all_links_df.to_excel("Pipeline_Transcripts.xlsx", index=False)
-            print("💾 Transcript links saved to Pipeline_Transcripts.xlsx")
+            all_transcript_data = []
+            # Use 3 browser tabs (drivers)
+            drivers = [webdriver.Chrome(service=Service(ChromeDriverManager().install()),
+                                        options=webdriver.ChromeOptions()) for _ in range(3)]
 
-        # Step 2: Extract keywords
-        print("\n🔍 STEP 2: Extracting keywords and context...")
-        keyword_df = self.analyze_transcript_urls(all_transcript_data)
+            # Progress bar for stocks within batch
+            pbar_stocks = tqdm(batch_stocks, desc=f"🔄 Batch {batch_num} transcripts",
+                               unit="stock", leave=False)
 
-        if keyword_df.empty:
-            print("❌ No keywords extracted. Exiting pipeline.")
-            return None
+            for i, stock in enumerate(pbar_stocks):
+                driver = drivers[i % 3]
+                pbar_stocks.set_description(f"🔄 Fetching {stock} transcripts")
+                try:
+                    transcript_links = self.fetch_transcripts(stock, max_docs_per_stock, driver=driver)
+                    if transcript_links:
+                        all_transcript_data.append(transcript_links)
+                    time.sleep(random.uniform(1.5, 2.2))  # Random delay to avoid being blocked
+                except Exception as e:
+                    print(f"⚠️ Error processing {stock}: {e}")
 
-        # Optional: Save keyword data
-        if save_intermediates:
-            keyword_df.to_csv("Pipeline_Keywords.csv", index=False)
-            print("💾 Keyword data saved to Pipeline_Keywords.csv")
+            pbar_stocks.close()
 
-        # Step 3: Generate summaries
-        print("\n🤖 STEP 3: Generating AI summaries...")
-        summaries_df = self.generate_summaries(keyword_df)
+            for d in drivers:
+                d.quit()
 
-        if summaries_df.empty:
-            print("❌ No summaries generated. Exiting pipeline.")
-            return None
+            if not all_transcript_data:
+                print("❌ No transcript links found in this batch.")
+                continue
 
-        # Save final results
-        summaries_df.to_csv("Pipeline_Final_Summaries.csv", index=False)
-        print("\n✅ PIPELINE COMPLETED!")
-        print("💾 Final summaries saved to Pipeline_Final_Summaries.csv")
-        print("=" * 50)
+            keyword_df = self.analyze_transcript_urls(all_transcript_data)
+            if keyword_df.empty:
+                print("❌ No keywords extracted in this batch.")
+                continue
 
-        return summaries_df
+            summaries_df = self.generate_summaries(keyword_df)
+            if summaries_df.empty:
+                print("❌ No summaries generated in this batch.")
+                continue
+
+            temp_file = f"Pipeline_Temp_Summary_Batch_{batch_num}.csv"
+            summaries_df.to_csv(temp_file, index=False)
+            print(f"💾 Saved batch summary to {temp_file}")
+            temp_files.append(temp_file)
+
+        pbar_batches.close()
+
+        # Combine all batch files
+        if temp_files:
+            print("\n📊 STEP 4: Combining batch results...")
+            pbar_combine = tqdm(temp_files, desc="📊 Combining batch files", unit="file")
+
+            combined_dfs = []
+            for temp_file in pbar_combine:
+                pbar_combine.set_description(f"📊 Reading {temp_file}")
+                combined_dfs.append(pd.read_csv(temp_file))
+
+            pbar_combine.close()
+
+            combined_df = pd.concat(combined_dfs, ignore_index=True)
+            combined_df.to_csv("Pipeline_Final_Summaries.csv", index=False)
+            print("📊 Combined all batches into Pipeline_Final_Summaries.csv")
+
+            # Clean up temporary files
+            pbar_cleanup = tqdm(temp_files, desc="🧹 Cleaning up temp files", unit="file")
+            for temp_file in pbar_cleanup:
+                pbar_cleanup.set_description(f"🧹 Deleting {temp_file}")
+                os.remove(temp_file)
+            pbar_cleanup.close()
+            print("🧹 Temporary batch files deleted.")
+
+        return pd.read_csv("Pipeline_Final_Summaries.csv")
 
 
 def main():
     """Main function to run the pipeline"""
-    # Configuration
-    GEMINI_API_KEY = "AIzaSyCKAqLPFgidL7L32sUeCKmvggnh2C1AhTo"  # Replace with your API key
+    # Configuration - Add your 3 API keys here
+    GEMINI_API_KEYS = [
+        "AIzaSyCKAqLPFgidL7L32sUeCKmvggnh2C1AhTo",  # API Key 1
+        "AIzaSyBS67gNUVyAY51L-_eurzfGzGLkG4m9r8Q",  # API Key 2
+        "AIzaSyDQItObHG6C80KP1-0-ZyaGZehcvHPN4tY",  # API Key 3
+        "AIzaSyB1G3JgPaBz1f3yI1oQwkA9oOxSzaWuU0w"  # API Key 4
+    ]
 
     # Get user input
     try:
@@ -350,13 +460,14 @@ def main():
     save_intermediates = input("Save intermediate files? (y/n, default=n): ").lower().startswith('y')
 
     # Initialize and run pipeline
-    pipeline = StockAnalysisPipeline(GEMINI_API_KEY)
+    pipeline = StockAnalysisPipeline(GEMINI_API_KEYS)
     results = pipeline.run_pipeline(max_docs_per_stock=max_docs, save_intermediates=save_intermediates)
 
     if results is not None:
         print(f"\n📊 Pipeline Summary:")
         print(f"   • Stocks processed: {len(results)}")
         print(f"   • Documents per stock: {max_docs}")
+        print(f"   • API keys rotated: Every {pipeline.stocks_per_key} stocks")
         print(f"   • Final output: Pipeline_Final_Summaries.csv")
 
         # Show first few results
