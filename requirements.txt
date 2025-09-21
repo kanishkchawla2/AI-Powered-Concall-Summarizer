@@ -1,0 +1,10 @@
+pandas
+requests
+pdfplumber
+beautifulsoup4
+urllib3
+selenium
+webdriver-manager
+google-generativeai
+tqdm
+openpyxl
