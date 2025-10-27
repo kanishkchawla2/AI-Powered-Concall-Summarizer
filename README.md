@@ -42,13 +42,11 @@ It scrapes concall transcripts from *Screener.in*, extracts context-rich financi
 * Built a **3-stage automation pipeline** (Scraping → Keyword Filtering → AI Summarization)
 * Extracted **high-signal context** from unstructured data across multiple sectors
 * Integrated with Excel for **instant visualization and strategic decision-making**
-* Created a **scalable modular codebase** for easy extension to new data sources
+* Designed the system for **scalability and easy integration** with other data sources
 
 ---
 
-## 🧩 Modular Architecture
-
-Every function is encapsulated in its own module — designed for clarity, testing, and scalability.
+## 🗂 File Structure
 
 ```
 main.py
@@ -59,9 +57,9 @@ main.py
 └── gemini_manager.py
 ```
 
-### 🧠 Module Breakdown
+### 🧠 Component Overview
 
-| Module                      | Responsibility                                                              |
+| File                        | Responsibility                                                              |
 | --------------------------- | --------------------------------------------------------------------------- |
 | **`main.py`**               | Central orchestrator that runs the full pipeline                            |
 | **`config.py`**             | Configuration hub for API keys, file paths, and parameters                  |
@@ -96,7 +94,7 @@ python main.py
 
 ---
 
-## 🧩 Customization & Extensibility
+## ⚙️ Customization & Extensibility
 
 ### Add New Keywords
 
@@ -132,21 +130,9 @@ data_manager.remove_stock("XYZCORP")
 ## ⚡ Performance & Reliability
 
 ✅ **Concurrent Execution** – Handles hundreds of transcripts efficiently
-✅ **Error Isolation** – Each module fails gracefully without stopping the pipeline
+✅ **Error Isolation** – Each process fails gracefully without stopping the pipeline
 ✅ **API Key Rotation** – Automatically switches keys to prevent rate-limit interruptions
 ✅ **Logging & Status Reports** – Real-time tracking of progress and errors
-
----
-
-## 🧩 Why Modular Design Matters
-
-| Benefit                | Description                                      |
-| ---------------------- | ------------------------------------------------ |
-| **Maintainability**    | Each component has a single, clear purpose       |
-| **Scalability**        | Easily add new features or expand stock coverage |
-| **Reusability**        | Modules can be reused in other data projects     |
-| **Debuggability**      | Isolated modules make bug tracing simple         |
-| **Team Collaboration** | Multiple contributors can work independently     |
 
 ---
 
