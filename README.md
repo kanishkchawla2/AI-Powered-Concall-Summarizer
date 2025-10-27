@@ -171,6 +171,4 @@ The long-term goal is to evolve this project into a **sector-intelligence dashbo
 
 ---
 
-## 📎 [Project Link & Demo]
 
-*(Add your GitHub link or demo video here once ready)*
