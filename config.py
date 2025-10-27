@@ -6,10 +6,7 @@ class Config:
     
     # Gemini API Keys - Add your keys here
     GEMINI_API_KEYS = [
-        "AIzaSyCKAqLPFgidL7L32sUeCKmvggnh2C1AhTo",  # API Key 1
-        "AIzaSyBS67gNUVyAY51L-_eurzfGzGLkG4m9r8Q",  # API Key 2
-        "AIzaSyDQItObHG6C80KP1-0-ZyaGZehcvHPN4tY",  # API Key 3
-        "AIzaSyB1G3JgPaBz1f3yI1oQwkA9oOxSzaWuU0w"  # API Key 4
+       "YOUR-API-KEY1", "YOUR-API-KEY2"
     ]
     
     # File paths
