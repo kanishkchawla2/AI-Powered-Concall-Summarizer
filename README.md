@@ -1,167 +1,54 @@
-# AI-Powered Concall Summarizer - Modular Structure
+# 🤖 AI-Powered Concall Summarizer for 1800+ Stocks
 
-This project has been refactored into a modular architecture for better maintainability and easier feature addition.
+### Accelerating qualitative research through automation and intelligent summarization
 
-## 📁 Project Structure
+---
 
-### Core Modules
+## 📘 Overview
 
-1. **`main.py`** - Main orchestrator
-   - Coordinates all modules
-   - Handles user input and pipeline execution
-   - Provides comprehensive status reporting
+In equity research, analysts spend **hours** manually reading concall transcripts to extract insights about management tone, guidance, and future plans.
+This project reimagines that process with **AI automation** — reducing hours of qualitative work into **minutes**.
 
-2. **`config.py`** - Configuration manager
-   - Centralized configuration settings
-   - API keys management
-   - Pipeline parameters
-   - Easy to modify settings
+The **AI-Powered Concall Summarizer** automates the end-to-end analysis pipeline for **1800+ listed Indian companies**.
+It scrapes concall transcripts from *Screener.in*, extracts context-rich financial commentary using **75+ domain-specific keywords**, and generates **Gemini AI–powered summaries** highlighting what truly matters — in less than a minute per company.
 
-3. **`data_manager.py`** - Data operations
-   - Excel file handling
-   - Stock list management
-   - CSV operations and file management
-   - Data validation and cleanup
+---
 
-4. **`keywords_manager.py`** - Keywords handling
-   - Keyword definitions and categories
-   - Context extraction around keywords
-   - Keyword filtering and matching
-   - Easy to add/remove keywords
+## 🚀 What It Does
 
-5. **`screener_extractor.py`** - Web scraping
-   - Screener.in data extraction
-   - PDF and webpage text extraction
-   - Multiple driver management
-   - Retry logic and error handling
+### 💡 Core Idea
 
-6. **`gemini_manager.py`** - AI operations
-   - Gemini API integration
-   - API key rotation
-   - Summary generation
-   - Rate limiting and error handling
+> Transform unstructured concall transcripts into concise, finance-focused summaries using keyword intelligence and AI reasoning.
 
-## 🚀 Quick Start
+### ⚙️ Pipeline in Action
 
-1. **Setup Environment**
-   ```bash
-   source venv/bin/activate
-   ```
+1. **Scraping** – Extracts transcripts (PDF/web) for each company from *Screener.in*
+2. **Keyword Filtering** – Detects relevant signals across 75+ financial terms like *margin, capex, guidance, demand, cost pressures,* etc.
+3. **AI Summarization** – Sends filtered, context-rich excerpts to **Gemini AI** for final summaries
+4. **Excel Integration** – Automatically exports summaries for each company into structured Excel sheets — ready for live analysis and reporting
 
-2. **Configure API Keys**
-   - Edit `config.py`
-   - Add your Gemini API keys to `GEMINI_API_KEYS` list
+---
 
-3. **Run the Pipeline**
-   ```bash
-   python main.py
-   ```
+## 📊 Key Outcomes
 
-## 🔧 Configuration
+| Metric                            | Before                  | After                               |
+| --------------------------------- | ----------------------- | ----------------------------------- |
+| Average analysis time per company | ~30 minutes             | < 1 minute                          |
+| Coverage                          | ~50–100 stocks manually | 1800+ automated                     |
+| Output format                     | Raw text                | Concise AI summaries + Excel export |
 
-All settings are centralized in `config.py`:
+### 🧠 Key Takeaways
 
-- **API Keys**: Add your Gemini API keys
-- **File Paths**: Configure input/output files
-- **Pipeline Settings**: Batch sizes, retry limits
-- **Web Scraping**: Driver settings, delays
-- **Keywords**: Context window, match limits
+* Built a **3-stage automation pipeline** (Scraping → Keyword Filtering → AI Summarization)
+* Extracted **high-signal context** from unstructured data across multiple sectors
+* Integrated with Excel for **instant visualization and strategic decision-making**
+* Created a **scalable modular codebase** for easy extension to new data sources
 
-## 📊 Features
+---
 
-### Easy Feature Addition
+## 🧩 Modular Architecture
 
-1. **Add New Keywords**
-   ```python
-   # In keywords_manager.py
-   keywords_manager.add_keyword("new_financial_term")
-   ```
-
-2. **Modify AI Instructions**
-   ```python
-   # In config.py
-   SYSTEM_INSTRUCTION = "Your custom instruction..."
-   ```
-
-3. **Add New Data Sources**
-   ```python
-   # Create new extractor in screener_extractor.py
-   def extract_from_new_source(self, url):
-       # Implementation
-   ```
-
-4. **Change Stock Lists**
-   ```python
-   # In data_manager.py
-   data_manager.add_stock("NEWSTOCK")
-   data_manager.remove_stock("OLDSTOCK")
-   ```
-
-### Improved Error Handling
-
-- Individual module error isolation
-- Comprehensive logging
-- Graceful degradation
-- Detailed status reporting
-
-### Better Performance
-
-- Modular processing
-- Concurrent operations
-- Efficient data management
-- Memory optimization
-
-## 🛠 Development Workflow
-
-### Adding New Features
-
-1. **Identify the appropriate module**
-   - Data operations → `data_manager.py`
-   - Web scraping → `screener_extractor.py`
-   - AI/ML → `gemini_manager.py`
-   - Keywords → `keywords_manager.py`
-   - Configuration → `config.py`
-
-2. **Add your feature**
-   ```python
-   def new_feature(self, parameters):
-       """Your new feature implementation"""
-       pass
-   ```
-
-3. **Update main.py if needed**
-   ```python
-   # Add to pipeline execution
-   result = self.module.new_feature(params)
-   ```
-
-4. **Test the feature**
-   ```bash
-   python main.py
-   ```
-
-### Extending Modules
-
-Each module is designed to be easily extensible:
-
-```python
-# Example: Adding a new keyword category
-class KeywordsManager:
-    def add_category(self, category_name, keywords_list):
-        """Add a new keyword category"""
-        # Implementation
-```
-
-## 📈 Benefits of Modular Structure
-
-1. **Maintainability**: Each module has a single responsibility
-2. **Testability**: Individual modules can be tested separately
-3. **Scalability**: Easy to add new features without affecting others
-4. **Reusability**: Modules can be reused in other projects
-5. **Debugging**: Easier to isolate and fix issues
-6. **Collaboration**: Multiple developers can work on different modules
-
-## 🔍 Module Dependencies
+Every function is encapsulated in its own module — designed for clarity, testing, and scalability.
 
 ```
 main.py
@@ -172,38 +59,132 @@ main.py
 └── gemini_manager.py
 ```
 
-Each module is designed to be independent with minimal cross-dependencies.
+### 🧠 Module Breakdown
 
-## 📝 Example Usage
+| Module                      | Responsibility                                                              |
+| --------------------------- | --------------------------------------------------------------------------- |
+| **`main.py`**               | Central orchestrator that runs the full pipeline                            |
+| **`config.py`**             | Configuration hub for API keys, file paths, and parameters                  |
+| **`data_manager.py`**       | Manages Excel I/O, CSV handling, and data validation                        |
+| **`keywords_manager.py`**   | Stores and manages financial keywords, context windows, and filtering logic |
+| **`screener_extractor.py`** | Scrapes Screener.in, extracts text from PDFs/webpages, handles retries      |
+| **`gemini_manager.py`**     | Manages Gemini API calls, key rotation, rate limits, and summarization      |
+
+---
+
+## 🛠 Quick Start
+
+### 1️⃣ Setup Environment
+
+```bash
+source venv/bin/activate
+```
+
+### 2️⃣ Add Gemini API Keys
+
+Edit `config.py`:
 
 ```python
-# Initialize components
-data_manager = DataManager("my_stocks.xlsx")
+GEMINI_API_KEYS = ["your_api_key_1", "your_api_key_2"]
+```
+
+### 3️⃣ Run the Pipeline
+
+```bash
+python main.py
+```
+
+---
+
+## 🧩 Customization & Extensibility
+
+### Add New Keywords
+
+```python
+# In keywords_manager.py
+keywords_manager.add_keyword("operating leverage")
+```
+
+### Modify AI Prompt
+
+```python
+# In config.py
+SYSTEM_INSTRUCTION = "Focus more on margin guidance and demand outlook."
+```
+
+### Add New Data Source
+
+```python
+# In screener_extractor.py
+def extract_from_new_source(self, url):
+    # Implementation here
+```
+
+### Change Stock Universe
+
+```python
+data_manager.add_stock("TCS")
+data_manager.remove_stock("XYZCORP")
+```
+
+---
+
+## ⚡ Performance & Reliability
+
+✅ **Concurrent Execution** – Handles hundreds of transcripts efficiently
+✅ **Error Isolation** – Each module fails gracefully without stopping the pipeline
+✅ **API Key Rotation** – Automatically switches keys to prevent rate-limit interruptions
+✅ **Logging & Status Reports** – Real-time tracking of progress and errors
+
+---
+
+## 🧩 Why Modular Design Matters
+
+| Benefit                | Description                                      |
+| ---------------------- | ------------------------------------------------ |
+| **Maintainability**    | Each component has a single, clear purpose       |
+| **Scalability**        | Easily add new features or expand stock coverage |
+| **Reusability**        | Modules can be reused in other data projects     |
+| **Debuggability**      | Isolated modules make bug tracing simple         |
+| **Team Collaboration** | Multiple contributors can work independently     |
+
+---
+
+## 🧠 Example Usage
+
+```python
+data_manager = DataManager("stocks.xlsx")
 keywords_manager = KeywordsManager()
 screener_extractor = ScreenerExtractor()
 gemini_manager = GeminiManager(api_keys)
 
-# Use individually
 stocks = data_manager.get_stock_list()
 keywords = keywords_manager.get_keywords()
-transcripts = screener_extractor.fetch_transcript_links("RELIANCE")
-summary = gemini_manager.generate_summary("RELIANCE", keyword_data)
+transcript = screener_extractor.fetch_transcript_links("RELIANCE")
+summary = gemini_manager.generate_summary("RELIANCE", keywords)
 ```
 
-## 🚨 Error Handling
+---
 
-Each module includes comprehensive error handling:
+## 🧾 Error Handling & Logging
 
-- **Network errors**: Automatic retries with exponential backoff
-- **API errors**: Graceful degradation and key rotation
-- **Data errors**: Validation and cleanup
-- **File errors**: Backup and recovery mechanisms
+* Automatic **retry** on failed network/API calls
+* **Exponential backoff** for rate-limiting
+* **Data validation** before summarization
+* **Comprehensive logs** for debugging and performance monitoring
 
-## 📊 Monitoring & Logging
+---
 
-- Real-time progress bars
-- Detailed status reporting
-- Error tracking and reporting
-- Performance metrics
+## 🧭 Vision
 
-This modular structure makes the codebase much more maintainable and allows for easy addition of new features without affecting existing functionality.
+The long-term goal is to evolve this project into a **sector-intelligence dashboard**, integrating:
+
+* Real-time financial commentary tracking
+* Automated fundamental screening
+* Predictive insights from historical management tone
+
+---
+
+## 📎 [Project Link & Demo]
+
+*(Add your GitHub link or demo video here once ready)*
