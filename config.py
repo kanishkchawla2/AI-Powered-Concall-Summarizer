@@ -6,8 +6,9 @@ class Config:
     
     # Gemini API Keys - Add your keys here
     GEMINI_API_KEYS = [
-        "AIzaSyBqHGI2H69Bey6IoKzu7gr8yiThNtC1XRo",  # API Key 1
-        "AIzaSyCS_hfA6F6dEqoQjNkC7MC_a8WMmDPs7D0",  # API Key 2
+      "AIzaSyAhdswKATRLPkzWIkzpASuV8W5ovjkDSUc",
+      "AIzaSyDAj4vurhcEhjhF2ptBQ0UosdKMyJ0mnzU"
+      
        
     ]
     
@@ -32,7 +33,7 @@ class Config:
     MAX_MATCHES_PER_KEYWORD = 2
     
     # Gemini settings
-    GEMINI_MODEL = "gemini-2.5-flash"
+    GEMINI_MODEL = "gemini-2.5-flash-lite"
     GENERATION_DELAY = 0.5  # Seconds between API calls
     
     # System instruction for Gemini

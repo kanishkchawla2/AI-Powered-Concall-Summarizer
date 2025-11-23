@@ -313,33 +313,70 @@ class StockAnalysisPipeline:
             return []
     
     def filter_stocks_to_process(self, stock_list, existing_stocks):
-        """Filter out stocks that already have summaries"""
+        """Filter out stocks that already have summaries (case-insensitive)"""
         if not existing_stocks:
+            print("🟢 No existing processed stocks detected. Processing full list.")
             return stock_list
-        
-        # Convert to lists to ensure we're working with Python lists, not pandas Series
+
+        # Normalize both lists to lowercase strings (strip whitespace)
+        def _norm_list(seq):
+            out = []
+            if hasattr(seq, 'tolist'):
+                try:
+                    seq = seq.tolist()
+                except:
+                    pass
+            for x in seq:
+                if x is None:
+                    continue
+                x = str(x).strip()
+                if not x:
+                    continue
+                out.append(x.lower())
+            return out
+
+        normalized_stock_list = _norm_list(stock_list)
+        normalized_existing = set(_norm_list(existing_stocks))
+
+        # Build mapping from normalized -> original (first occurrence) so we can return originals
+        original_map = {}
+        # Ensure stock_list iterable
         if hasattr(stock_list, 'tolist'):
-            stock_list = stock_list.tolist()
-        if hasattr(existing_stocks, 'tolist'):
-            existing_stocks = existing_stocks.tolist()
-        
-        # Convert to sets for faster lookup
-        existing_stocks_set = set(existing_stocks)
-        stocks_to_process = [stock for stock in stock_list if stock not in existing_stocks_set]
-        skipped_count = len(stock_list) - len(stocks_to_process)
-        
-        print(f"📊 Stock filtering results:")
-        print(f"   • Total stocks in list: {len(stock_list)}")
-        print(f"   • Stocks with existing summaries: {skipped_count}")
-        print(f"   • Stocks to process: {len(stocks_to_process)}")
-        
+            stock_list_iter = stock_list.tolist()
+        else:
+            stock_list_iter = list(stock_list)
+        for orig in stock_list_iter:
+            key = str(orig).strip().lower()
+            if key and key not in original_map:
+                original_map[key] = orig
+
+        # Filter out those present in existing
+        filtered_keys = [k for k in normalized_stock_list if k not in normalized_existing]
+        stocks_to_process = [original_map[k] for k in filtered_keys]
+        skipped_count = len(stock_list_iter) - len(stocks_to_process)
+
+        print("📊 Stock filtering results:")
+        print(f"   • Total stocks (raw): {len(stock_list_iter)}")
+        print(f"   • Already processed (matched case-insensitive): {skipped_count}")
+        print(f"   • Remaining to process: {len(stocks_to_process)}")
+
+        if skipped_count:
+            # Show sample skipped
+            skipped_keys = [k for k in normalized_stock_list if k in normalized_existing][:10]
+            if skipped_keys:
+                print("   • Sample skipped:")
+                for k in skipped_keys:
+                    print(f"     - {original_map.get(k, k)}")
+
         if stocks_to_process:
-            print(f"📝 Stocks to be processed:")
-            for i, stock in enumerate(stocks_to_process[:10]):  # Show first 10
-                print(f"   • {stock}")
+            print("📝 Sample to process:")
+            for s in stocks_to_process[:10]:
+                print(f"   • {s}")
             if len(stocks_to_process) > 10:
                 print(f"   ... and {len(stocks_to_process) - 10} more")
-        
+        else:
+            print("✅ All stocks already processed.")
+
         return stocks_to_process
 
     def get_pipeline_status(self):
@@ -402,7 +439,6 @@ def main():
         # Initialize and run pipeline
         print(f"\n🔧 INITIALIZING PIPELINE")
         print("-" * 30)
-        
         pipeline = StockAnalysisPipeline()
         
         # Show pipeline status
@@ -425,10 +461,9 @@ def main():
         # Run the pipeline
         print(f"\n🚀 STARTING ANALYSIS")
         print("=" * 60)
-        
         start_time = time.time()
         results = pipeline.run_pipeline(
-            max_docs_per_stock=max_docs, 
+            max_docs_per_stock=max_docs,
             save_intermediates=save_intermediates,
             batch_size=batch_size,
             check_existing=check_existing
@@ -443,31 +478,28 @@ def main():
             print(f"   • Total stocks in results: {len(results)}")
             print(f"   • Documents per stock: {max_docs}")
             print(f"   • Processing mode: {'Resume from temp' if check_existing else 'Process all'}")
-            print(f"   • Final output: Pipeline_Final_Summaries.csv")
+            print(f"   • Final output: {Config.FINAL_OUTPUT_FILE}")
             
-            # Show sample results
             print(f"\n📄 SAMPLE RESULTS (First 3):")
             print("-" * 60)
             for i, (_, row) in enumerate(results.head(3).iterrows()):
                 print(f"   {i + 1}. {row['Stock']}: {row['Summary'][:100]}...")
             
-            print(f"\n✅ Analysis complete! Check 'Pipeline_Final_Summaries.csv' for full results.")
+            print(f"\n✅ Analysis complete! Check '{Config.FINAL_OUTPUT_FILE}' for full results.")
         elif results is None:
             print(f"\n✅ PIPELINE COMPLETED - NO NEW PROCESSING NEEDED")
             print("=" * 60)
-            print("   • All stocks already have summaries")
-            print("   • Check 'Pipeline_Final_Summaries.csv' for existing results")
+            print("   • All stocks already processed")
+            print(f"   • Check existing batch files in {Config.TEMP_FOLDER}/ or final summaries file if present")
         else:
             print(f"\n❌ PIPELINE FAILED")
             print("=" * 60)
             print("   • No results were generated")
             print("   • Check the logs above for errors")
-    
     except KeyboardInterrupt:
         print(f"\n⏹️  PIPELINE INTERRUPTED")
         print("=" * 60)
         print("   • Analysis stopped by user")
-    
     except Exception as e:
         print(f"\n💥 PIPELINE ERROR")
         print("=" * 60)
