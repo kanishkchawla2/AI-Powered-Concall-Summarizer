@@ -121,7 +121,7 @@ class StockAnalysisPipeline:
         pbar_summaries.close()
         return pd.DataFrame(summaries)
     
-    def run_pipeline(self, max_docs_per_stock=None, save_intermediates=False, batch_size=None):
+    def run_pipeline(self, max_docs_per_stock=None, save_intermediates=False, batch_size=None, check_existing=False):
         """Main pipeline execution with configurable parameters"""
         # Use config defaults if not provided
         max_docs_per_stock = max_docs_per_stock or Config.DEFAULT_DOCS_PER_STOCK
@@ -137,6 +137,7 @@ class StockAnalysisPipeline:
         print(f"   • Stocks in list: {data_stats['total_stocks']}")
         print(f"   • Documents per stock: {max_docs_per_stock}")
         print(f"   • Batch size: {batch_size}")
+        print(f"   • Resume from temp files: {check_existing}")
         print("=" * 50)
         
         # Get stock list
@@ -144,6 +145,28 @@ class StockAnalysisPipeline:
         if stock_list is None or len(stock_list) == 0:
             print("❌ No stocks found in stock list")
             return None
+        
+        # Debug info
+        print(f"📊 Stock list type: {type(stock_list)}")
+        if hasattr(stock_list, 'shape'):
+            print(f"📊 Stock list shape: {stock_list.shape}")
+        print(f"📊 Stock list length: {len(stock_list)}")
+        
+        # Check for existing progress and filter if requested
+        if check_existing:
+            print(f"\n🔍 CHECKING TEMP FILES FOR PROGRESS")
+            print("-" * 30)
+            try:
+                existing_stocks = self.check_existing_summaries()
+                stock_list = self.filter_stocks_to_process(stock_list, existing_stocks)
+                
+                if not stock_list:
+                    print("✅ All stocks already processed in temp files! No new processing needed.")
+                    return None
+            except Exception as e:
+                print(f"⚠️ Error checking existing progress: {e}")
+                print("Continuing with all stocks...")
+                # Continue with original stock list if there's an error
         
         # Step 1: Scrape transcript links in batches
         print(f"\n📋 STEP 1: Scraping transcript links for {len(stock_list)} stocks...")
@@ -184,28 +207,141 @@ class StockAnalysisPipeline:
             
             # Save batch results
             temp_file = f"{Config.TEMP_FILE_PREFIX}{batch_num}.csv"
+            # Ensure the temp directory exists
+            os.makedirs(Config.TEMP_FOLDER, exist_ok=True)
             if self.data_manager.save_summaries(summaries_df.to_dict('records'), temp_file):
                 temp_files.append(temp_file)
                 print(f"💾 Saved batch {batch_num} results to {temp_file}")
         
         pbar_batches.close()
         
-        # Step 4: Combine all batch files
-        if temp_files:
-            print(f"\n📊 STEP 4: Combining {len(temp_files)} batch files...")
-            final_df = self.data_manager.combine_batch_files(temp_files)
+        # Step 4: Combine all batch files (including existing ones if checking progress)
+        all_temp_files = temp_files.copy()
+        
+        # If checking existing, also include previously created batch files
+        if check_existing:
+            temp_folder = Config.TEMP_FOLDER
+            if os.path.exists(temp_folder):
+                existing_batch_files = []
+                # Get just the filename part of the prefix for comparison
+                prefix_filename = os.path.basename(Config.TEMP_FILE_PREFIX)
+                for file in os.listdir(temp_folder):
+                    if file.startswith(prefix_filename) and file.endswith('.csv'):
+                        full_path = os.path.join(temp_folder, file)
+                        if full_path not in temp_files:  # Don't duplicate newly created files
+                            existing_batch_files.append(full_path)
+                
+                if existing_batch_files:
+                    print(f"� Including {len(existing_batch_files)} existing batch files")
+                    all_temp_files.extend(existing_batch_files)
+        
+        if all_temp_files:
+            print(f"\n📊 STEP 4: Combining {len(all_temp_files)} batch files...")
+            final_df = self.data_manager.combine_batch_files(all_temp_files)
             
             # Clean up temporary files unless user wants to keep them
-            if not save_intermediates:
-                self.data_manager.cleanup_temp_files(temp_files)
+            # Only clean up newly created files, not existing ones when check_existing=True
+            files_to_cleanup = temp_files if check_existing else all_temp_files
+            
+            if not save_intermediates and files_to_cleanup:
+                self.data_manager.cleanup_temp_files(files_to_cleanup)
+                if check_existing and temp_files:
+                    print(f"💾 Cleaned up {len(temp_files)} new batch files, preserved existing ones")
             else:
-                print(f"💾 Intermediate files preserved: {', '.join(temp_files)}")
+                print(f"💾 All batch files preserved: {len(all_temp_files)} total files")
             
             return final_df
         else:
             print("❌ No batch files were created successfully")
             return None
     
+    def check_existing_summaries(self, temp_folder=None):
+        """Check for existing summaries in temporary batch files"""
+        existing_stocks = []
+        try:
+            # Use config temp folder if not provided
+            if temp_folder is None:
+                temp_folder = Config.TEMP_FOLDER
+            
+            # Check if temp folder exists
+            if not os.path.exists(temp_folder):
+                print("📄 No temp folder found - will process all stocks")
+                return []
+            
+            # Find all batch files in temp folder
+            batch_files = []
+            # Get just the filename part of the prefix for comparison
+            prefix_filename = os.path.basename(Config.TEMP_FILE_PREFIX)
+            for file in os.listdir(temp_folder):
+                if file.startswith(prefix_filename) and file.endswith('.csv'):
+                    batch_files.append(os.path.join(temp_folder, file))
+            
+            if not batch_files:
+                print("📄 No existing batch files found - will process all stocks")
+                return []
+            
+            print(f"📋 Found {len(batch_files)} existing batch files:")
+            
+            # Read all batch files and collect processed stocks
+            for batch_file in sorted(batch_files):
+                try:
+                    batch_df = pd.read_csv(batch_file)
+                    if 'Stock' in batch_df.columns:
+                        batch_stocks = batch_df['Stock'].unique().tolist()
+                        existing_stocks.extend(batch_stocks)
+                        print(f"   • {os.path.basename(batch_file)}: {len(batch_stocks)} stocks")
+                    else:
+                        print(f"   ⚠️ {os.path.basename(batch_file)}: No 'Stock' column found")
+                except Exception as e:
+                    print(f"   ⚠️ Error reading {os.path.basename(batch_file)}: {e}")
+            
+            # Remove duplicates
+            existing_stocks = list(set(existing_stocks))
+            
+            if existing_stocks:
+                print(f"📊 Total unique stocks already processed: {len(existing_stocks)}")
+                print("📝 Processed stocks:")
+                for i, stock in enumerate(existing_stocks[:10]):  # Show first 10
+                    print(f"   • {stock}")
+                if len(existing_stocks) > 10:
+                    print(f"   ... and {len(existing_stocks) - 10} more")
+            
+            return existing_stocks
+            
+        except Exception as e:
+            print(f"⚠️ Error checking temp folder: {e}")
+            return []
+    
+    def filter_stocks_to_process(self, stock_list, existing_stocks):
+        """Filter out stocks that already have summaries"""
+        if not existing_stocks:
+            return stock_list
+        
+        # Convert to lists to ensure we're working with Python lists, not pandas Series
+        if hasattr(stock_list, 'tolist'):
+            stock_list = stock_list.tolist()
+        if hasattr(existing_stocks, 'tolist'):
+            existing_stocks = existing_stocks.tolist()
+        
+        # Convert to sets for faster lookup
+        existing_stocks_set = set(existing_stocks)
+        stocks_to_process = [stock for stock in stock_list if stock not in existing_stocks_set]
+        skipped_count = len(stock_list) - len(stocks_to_process)
+        
+        print(f"📊 Stock filtering results:")
+        print(f"   • Total stocks in list: {len(stock_list)}")
+        print(f"   • Stocks with existing summaries: {skipped_count}")
+        print(f"   • Stocks to process: {len(stocks_to_process)}")
+        
+        if stocks_to_process:
+            print(f"📝 Stocks to be processed:")
+            for i, stock in enumerate(stocks_to_process[:10]):  # Show first 10
+                print(f"   • {stock}")
+            if len(stocks_to_process) > 10:
+                print(f"   ... and {len(stocks_to_process) - 10} more")
+        
+        return stocks_to_process
+
     def get_pipeline_status(self):
         """Get current pipeline status and statistics"""
         return {
@@ -241,6 +377,14 @@ def main():
         print("\n⚙️  CONFIGURATION")
         print("-" * 30)
         
+        # Ask about checking existing summaries
+        print("📋 PROCESSING MODE:")
+        print("   1. Resume from temp files - skip already processed stocks")
+        print("   2. Start fresh - process all stocks (ignore temp files)")
+        
+        mode_choice = input("Choose processing mode (1/2, default=1): ").strip()
+        check_existing = mode_choice != "2"
+        
         user_input = input(f"📄 Number of recent documents per stock (default={Config.DEFAULT_DOCS_PER_STOCK}): ")
         max_docs = int(user_input.strip()) if user_input.strip().isdigit() else Config.DEFAULT_DOCS_PER_STOCK
         
@@ -250,6 +394,7 @@ def main():
         batch_size = int(batch_input.strip()) if batch_input.strip().isdigit() else Config.DEFAULT_BATCH_SIZE
         
         print(f"\n✅ Configuration set:")
+        print(f"   • Processing mode: {'Resume from temp files' if check_existing else 'Start fresh'}")
         print(f"   • Documents per stock: {max_docs}")
         print(f"   • Save intermediates: {save_intermediates}")
         print(f"   • Batch size: {batch_size}")
@@ -285,7 +430,8 @@ def main():
         results = pipeline.run_pipeline(
             max_docs_per_stock=max_docs, 
             save_intermediates=save_intermediates,
-            batch_size=batch_size
+            batch_size=batch_size,
+            check_existing=check_existing
         )
         end_time = time.time()
         
@@ -294,8 +440,9 @@ def main():
             print(f"\n📈 PIPELINE COMPLETED SUCCESSFULLY")
             print("=" * 60)
             print(f"   • Execution time: {end_time - start_time:.2f} seconds")
-            print(f"   • Stocks processed: {len(results)}")
+            print(f"   • Total stocks in results: {len(results)}")
             print(f"   • Documents per stock: {max_docs}")
+            print(f"   • Processing mode: {'Resume from temp' if check_existing else 'Process all'}")
             print(f"   • Final output: Pipeline_Final_Summaries.csv")
             
             # Show sample results
@@ -305,6 +452,11 @@ def main():
                 print(f"   {i + 1}. {row['Stock']}: {row['Summary'][:100]}...")
             
             print(f"\n✅ Analysis complete! Check 'Pipeline_Final_Summaries.csv' for full results.")
+        elif results is None:
+            print(f"\n✅ PIPELINE COMPLETED - NO NEW PROCESSING NEEDED")
+            print("=" * 60)
+            print("   • All stocks already have summaries")
+            print("   • Check 'Pipeline_Final_Summaries.csv' for existing results")
         else:
             print(f"\n❌ PIPELINE FAILED")
             print("=" * 60)
