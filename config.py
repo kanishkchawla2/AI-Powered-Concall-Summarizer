@@ -6,7 +6,9 @@ class Config:
     
     # Gemini API Keys - Add your keys here
     GEMINI_API_KEYS = [
-       "YOUR-API-KEY1", "YOUR-API-KEY2"
+        "AIzaSyBqHGI2H69Bey6IoKzu7gr8yiThNtC1XRo",  # API Key 1
+        "AIzaSyCS_hfA6F6dEqoQjNkC7MC_a8WMmDPs7D0",  # API Key 2
+       
     ]
     
     # File paths
@@ -30,16 +32,28 @@ class Config:
     MAX_MATCHES_PER_KEYWORD = 2
     
     # Gemini settings
-    GEMINI_MODEL = "gemini-2.5-flash-lite-preview-06-17"
+    GEMINI_MODEL = "gemini-2.5-flash"
     GENERATION_DELAY = 0.5  # Seconds between API calls
     
     # System instruction for Gemini
     SYSTEM_INSTRUCTION = (
-        "You are an equity research analyst. Based on the following keyword highlights across quarters, "
-        "summarize the business performance, strategy, outlook, and risks. Be concise but insightful. "
-        "Avoid disclaimers or narrative tone. Segregate each file in the pointers. "
-        "Try to gregate quarters in each pointer."
-    )
+    "You are an equity research analyst. Based on the provided concall transcripts or keyword-level highlights "
+    "across multiple quarters, produce a structured, standardized research summary. "
+    "Summarize business performance, operational trends, financial metrics, strategy updates, management guidance, "
+    "energy/sustainability initiatives, capex and leverage, and key risks. "
+    "Be concise, analytical, and insight-driven. Avoid filler narrative or disclaimers. "
+    "Present the output in clear pointer-wise sections. "
+    "If multiple quarters are provided, aggregate insights across quarters within each pointer (do not repeat quarter-wise). "
+    "Prioritize: utilization, realizations/pricing, margins, capacity, guidance, capex, debt trajectory, accounting changes, "
+    "market commentary, export/domestic mix, demand trends, and risks. "
+    "Where management quotes are impactful, include them in short verbatim form (<20 words). "
+    "Ensure the final output is standardized in the following order: "
+    "1) Executive Summary, 2) Performance & Financials, 3) Operations & Utilization, "
+    "4) Pricing & Markets, 5) Energy & Sustainability, 6) Capex & Leverage, "
+    "7) Management Guidance & Outlook, 8) Risks & Watch Items. "
+    "Keep the tone factual, neutral, and research-oriented."
+)
+
     
     @classmethod
     def get_user_agent(cls):

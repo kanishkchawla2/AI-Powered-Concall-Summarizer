@@ -8,94 +8,68 @@ class KeywordsManager:
     def __init__(self):
         """Initialize with comprehensive keyword sets"""
         self.keywords = [
-            # Financial performance
-            "revenue", "topline", "bottomline", "EBITDA", "EBIT", "PAT", "net profit",
-            "gross margin", "margins", "operating leverage", "cost pressure", "input cost",
-            "realization", "pricing power", "price hike", "discounting",
+    # Financials
+    "revenue","sales","topline","ebitda","ebit","pat","profit","margin","gm","om","nm",
+    "realization","realise","pricing","price","spreads","mix","volume","volumes","opex","cost","costs",
 
-            # Costs & efficiency
-            "raw material", "RM cost", "energy cost", "power cost", "gas prices",
-            "opex", "cost optimization", "efficiency", "productivity", "cost leadership",
+    # Inputs & RM
+    "rm","raw material","input","commodity","energy","power","electricity","fuel","gas","cotton","chemicals",
 
-            # Capex & expansion
-            "capex", "expansion", "capacity utilization", "commissioning",
-            "greenfield", "brownfield", "debottlenecking", "backward integration",
+    # Capex & Capacity
+    "capex","expansion","capacity","utilization","util","commission","commenced","debottleneck","brownfield","greenfield","automation","modernization",
 
-            # Liquidity & balance sheet
-            "free cash flow", "working capital", "cash conversion",
-            "net debt", "debt reduction", "interest coverage", "leverage", "finance cost",
-            "capital adequacy", "collections", "disbursement",
+    # Balance Sheet & Cash
+    "fcf","free cash","cash flow","working capital","inventory","receivables","payables",
+    "net debt","gross debt","debt","leverage","gearing","interest","finance cost","borrowing","coverage",
 
-            # Ratios
-            "ROCE", "ROE", "asset turnover", "inventory days", "receivable days", "payable days",
+    # Returns & Ratios
+    "roce","roe","asset turnover","return","yield",
 
-            # Business drivers
-            "demand", "volume growth", "product mix", "premiumization",
-            "channel mix", "SKU", "new launch", "market share",
-            "domestic", "exports", "geo mix", "international business",
+    # Demand & Market
+    "demand","orders","order book","visibility","market","market share",
+    "product mix","premium","premiumization","domestic","exports","export","geo mix","international","channel",
 
-            # Seasonality & cycles
-            "festive season", "wedding season", "monsoon",
-            "seasonality", "inventory build-up", "destocking", "restocking", "inventory correction",
+    # Cycles & Seasonality
+    "seasonality","seasonal","festive","wedding","monsoon","destock","destocking","restock","restocking",
 
-            # Macro & regulatory
-            "headwinds", "tailwinds", "macro uncertainty", "regulatory environment",
-            "GST", "budget impact", "PLI", "FAME", "subsidy", "tax rate", "duty impact", "customs",
+    # Macro & Policy
+    "macro","headwinds","tailwinds","regulatory","regulation","policy","subsidy","incentive",
+    "tax","taxation","duties","duty","customs","pli","budget","inflation","rates","interest rate","repo",
 
-            # Management tone & outlook
-            "guidance", "outlook", "visibility", "confident", "cautious", "optimistic",
-            "conservative", "hopeful", "strong growth", "muted", "rebound", "softness",
-            "moderation", "volatility", "stability",
+    # Management Tone
+    "guidance","outlook","commentary","visibility","confidence","cautious","optimistic","strong","muted","softness","weakness","volatility","stability",
 
-            # Supply chain & execution
-            "supply chain", "logistics", "freight cost", "warehousing",
-            "sourcing", "import substitution", "supply constraints", "project delays",
+    # Supply Chain & Execution
+    "supply","supply chain","logistics","freight","shipping","transport","warehousing",
+    "sourcing","procurement","constraints","bottleneck","delays","execution",
 
-            # Corporate actions
-            "promoter holding", "pledge", "buyback", "dividend payout", "shareholding",
+    # Accounting
+    "depreciation","amortization","policy change","accounting","one-off","exceptional","extraordinary","restatement",
 
-            # Tech, ESG, innovation
-            "AI adoption", "EV transition", "sustainability", "ESG", "carbon footprint",
-            "green initiatives", "R&D", "innovation", "automation", "digital transformation",
-            "cybersecurity", "cloud adoption", "patents", "benchmarking",
+    # Corporate Actions
+    "promoter","pledge","buyback","dividend","shareholding","equity","capital raise","qip","rights",
 
-            # Banking & Lending
-            "retail banking", "corporate banking", "commercial banking", "wholesale banking", "private banking", "priority banking",
-            "lending", "credit growth", "loan book", "loan growth", "loan disbursement", "retail loans", "corporate loans", "personal loans", 
-            "home loans", "auto loans", "gold loans", "SME loans", "MSME loans", "agri loans", "working capital loans", 
-            "NIM", "net interest margin", "spread", "yields", "deposit rates", "CASA", "current account", "savings account", "time deposits",
-            "credit demand", "advances", "loan-to-deposit ratio", "credit cost", "slippages", "restructuring", "provisioning", "write-offs",
+    # ESG / Energy
+    "sustainability","esg","renewable","solar","wind","ppa","tariff","savings","energy efficiency","mw","carbon","emissions",
 
-            # Insurance
-            "life insurance", "general insurance", "health insurance", "motor insurance", "crop insurance", 
-            "premiums", "gross written premium", "new business premium", "renewals", "first year premium", 
-            "claims ratio", "loss ratio", "combined ratio", "reinsurance", "policyholder surplus", "underwriting", 
-            "solvency ratio", "persistency ratio", "embedded value", "value of new business", "protection mix",
+    # BFSI (high-density)
+    "nim","spread","yield","casa","deposits","advances","loan","loan growth","credit growth",
+    "slippages","slippage","npa","gnpa","nnpa","asset quality","provision","provisioning","write-off","credit cost","delinquencies","aum",
 
-            # Capital Markets
-            "investment banking", "equity capital markets", "debt capital markets", "M&A advisory", 
-            "IPO", "FPO", "QIP", "buyback", "follow-on offering", 
-            "brokerage", "trading volumes", "clearing", "settlement", "custody services", 
-            "asset management", "mutual funds", "ETF", "AUM", "portfolio management services", "wealth management",
+    # Insurance
+    "gwp","premium","premiums","claims","claim","loss ratio","combined ratio",
+    "solvency","persistency","vnb","embedded value","protection mix",
 
-            # Risk & Regulation
-            "credit risk", "market risk", "liquidity risk", "operational risk", 
-            "capital adequacy ratio", "CRAR", "CET1", "Tier 1 capital", "Tier 2 capital", 
-            "risk weighted assets", "stress testing", "Basel norms", "Basel III", 
-            "NPA", "GNPA", "NNPA", "provision coverage ratio", "IFRS 9", "Ind AS", "SOX compliance",
+    # Capital Markets
+    "ib","ecm","dcm","markets","brokerage","trading","turnover","volumes","etf","pms","wealth","mf","mutual fund","aum",
 
-            # Payments & Fintech
-            "digital payments", "UPI", "NEFT", "RTGS", "IMPS", "mobile wallets", "credit cards", "debit cards", 
-            "BNPL", "buy now pay later", "payment gateway", "POS terminals", 
-            "neobanks", "digital lending", "fintech partnerships", "API banking", "open banking", "CBDC", "blockchain in BFSI",
+    # Payments / Fintech
+    "upi","bnpl","gateway","pos","digital","api","cbdc","payment","fintech","wallet",
 
-            # Macroeconomic & BFSI Drivers
-            "interest rates", "monetary policy", "repo rate", "reverse repo", "SLR", "CRR", 
-            "liquidity", "credit cycle", "GDP growth", "inflation", "employment", "fiscal deficit", 
-            "sovereign bonds", "yield curve", "foreign exchange", "rupee depreciation", "FII flows", "FDI inflows",
+    # Macro BFSI
+    "repo","reverse repo","slr","crr","liquidity","inflation","gdp","fii","fdi","fx","currency","rupee"
+]
 
-           
-        ]
     
     def get_keywords(self):
         """Return the list of keywords"""
