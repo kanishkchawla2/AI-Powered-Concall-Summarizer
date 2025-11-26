@@ -6,8 +6,7 @@ class Config:
     
     # Gemini API Keys - Add your keys here
     GEMINI_API_KEYS = [
-      "AIzaSyAhdswKATRLPkzWIkzpASuV8W5ovjkDSUc",
-      "AIzaSyDAj4vurhcEhjhF2ptBQ0UosdKMyJ0mnzU"
+      
       
        
     ]
