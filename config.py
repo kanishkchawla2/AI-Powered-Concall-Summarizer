@@ -1,15 +1,13 @@
 # Configuration Manager
 # Handles all configuration settings for the pipeline
 
+import os
+
 class Config:
     """Configuration settings for the Stock Analysis Pipeline"""
     
-    # Gemini API Keys - Add your keys here
-    GEMINI_API_KEYS = [
-      
-      
-       
-    ]
+    # Gemini API Keys - Load from environment variable (comma-separated)
+    GEMINI_API_KEYS = [k.strip() for k in os.getenv("GEMINI_API_KEYS", "").split(",") if k.strip()]
     
     # File paths
     STOCK_LIST_FILE = "stock_list.xlsx"

@@ -121,7 +121,7 @@ class StockAnalysisPipeline:
         pbar_summaries.close()
         return pd.DataFrame(summaries)
     
-    def run_pipeline(self, max_docs_per_stock=None, save_intermediates=False, batch_size=None, check_existing=False):
+    def run_pipeline(self, max_docs_per_stock=None, save_intermediates=False, batch_size=None, check_existing=False, stock_subset=None):
         """Main pipeline execution with configurable parameters"""
         # Use config defaults if not provided
         max_docs_per_stock = max_docs_per_stock or Config.DEFAULT_DOCS_PER_STOCK
@@ -145,6 +145,22 @@ class StockAnalysisPipeline:
         if stock_list is None or len(stock_list) == 0:
             print("❌ No stocks found in stock list")
             return None
+
+        # If a subset is provided, intersect with available stocks (case-insensitive)
+        if stock_subset is not None:
+            try:
+                # Normalize to lowercase for comparison
+                base_set = set([str(s).strip().lower() for s in stock_list if str(s).strip()])
+                desired = [str(s).strip().lower() for s in stock_subset if str(s).strip()]
+                filtered = [s for s in desired if s in base_set]
+                print(f"🔎 Applying subset filter: requested={len(desired)}, matched={len(filtered)}")
+                if not filtered:
+                    print("⚠️ None of the requested stocks were found in the main stock list. Aborting.")
+                    return None
+                stock_list = filtered
+            except Exception as e:
+                print(f"⚠️ Error applying stock subset: {e}")
+                return None
         
         # Debug info
         print(f"📊 Stock list type: {type(stock_list)}")
@@ -421,6 +437,26 @@ def main():
         
         mode_choice = input("Choose processing mode (1/2, default=1): ").strip()
         check_existing = mode_choice != "2"
+
+        # Ask whether to process all stocks or a subset from an Excel file
+        print("\n📋 STOCK SELECTION MODE:")
+        print("   A. All stocks from main list")
+        print("   B. Only stocks listed in an Excel file (must have a 'Stock' column)")
+        stock_mode = input("Choose stock selection (A/B, default=A): ").strip().upper()
+        subset_file = None
+        subset_list = None
+        if stock_mode == "B":
+            subset_file = input("📄 Enter path to Excel file with a 'Stock' column: ").strip()
+            try:
+                tmp_df = pd.read_excel(subset_file)
+                if 'Stock' not in tmp_df.columns:
+                    print("❌ Excel file must contain a 'Stock' column. Aborting.")
+                    return
+                subset_list = tmp_df['Stock'].dropna().tolist()
+                print(f"🔎 Loaded {len(subset_list)} stocks from {subset_file}")
+            except Exception as e:
+                print(f"❌ Failed to read subset file: {e}")
+                return
         
         user_input = input(f"📄 Number of recent documents per stock (default={Config.DEFAULT_DOCS_PER_STOCK}): ")
         max_docs = int(user_input.strip()) if user_input.strip().isdigit() else Config.DEFAULT_DOCS_PER_STOCK
@@ -432,6 +468,10 @@ def main():
         
         print(f"\n✅ Configuration set:")
         print(f"   • Processing mode: {'Resume from temp files' if check_existing else 'Start fresh'}")
+        if subset_list is not None:
+            print(f"   • Stock selection: Subset from file ({len(subset_list)} stocks)")
+        else:
+            print(f"   • Stock selection: All stocks")
         print(f"   • Documents per stock: {max_docs}")
         print(f"   • Save intermediates: {save_intermediates}")
         print(f"   • Batch size: {batch_size}")
@@ -466,46 +506,44 @@ def main():
             max_docs_per_stock=max_docs,
             save_intermediates=save_intermediates,
             batch_size=batch_size,
-            check_existing=check_existing
+            check_existing=check_existing,
+            stock_subset=subset_list
         )
         end_time = time.time()
         
-        # Show results
-        if results is not None and len(results) > 0:
-            print(f"\n📈 PIPELINE COMPLETED SUCCESSFULLY")
-            print("=" * 60)
-            print(f"   • Execution time: {end_time - start_time:.2f} seconds")
-            print(f"   • Total stocks in results: {len(results)}")
-            print(f"   • Documents per stock: {max_docs}")
-            print(f"   • Processing mode: {'Resume from temp' if check_existing else 'Process all'}")
-            print(f"   • Final output: {Config.FINAL_OUTPUT_FILE}")
+        duration_min = (end_time - start_time) / 60
+        print(f"\n✅ Analysis complete! Duration: {duration_min:.1f} minutes")
+        
+        if results is not None and not results.empty:
+            # Display final summary statistics
+            print(f"\n📊 FINAL SUMMARY STATISTICS")
+            print("-" * 30)
+            print(f"   • Total stocks processed: {results['Stock'].nunique()}")
+            print(f"   • Total summaries generated: {len(results)}")
+            print(f"   • Total keywords matched: {results.filter(like='File').count().sum()}")
             
-            print(f"\n📄 SAMPLE RESULTS (First 3):")
-            print("-" * 60)
-            for i, (_, row) in enumerate(results.head(3).iterrows()):
-                print(f"   {i + 1}. {row['Stock']}: {row['Summary'][:100]}...")
+            # Show sample results
+            sample_size = min(5, len(results))
+            print(f"\n📋 SAMPLE RESULTS ({sample_size} entries)")
+            print(results.sample(sample_size, random_state=42).to_string(index=False))
             
-            print(f"\n✅ Analysis complete! Check '{Config.FINAL_OUTPUT_FILE}' for full results.")
-        elif results is None:
-            print(f"\n✅ PIPELINE COMPLETED - NO NEW PROCESSING NEEDED")
-            print("=" * 60)
-            print("   • All stocks already processed")
-            print(f"   • Check existing batch files in {Config.TEMP_FOLDER}/ or final summaries file if present")
+            # Save final results to CSV
+            output_file = Config.OUTPUT_FILE
+            results.to_csv(output_file, index=False)
+            print(f"💾 Final results saved to: {output_file}")
         else:
-            print(f"\n❌ PIPELINE FAILED")
-            print("=" * 60)
-            print("   • No results were generated")
-            print("   • Check the logs above for errors")
-    except KeyboardInterrupt:
-        print(f"\n⏹️  PIPELINE INTERRUPTED")
-        print("=" * 60)
-        print("   • Analysis stopped by user")
+            print("❌ No results to display")
+    
     except Exception as e:
-        print(f"\n💥 PIPELINE ERROR")
-        print("=" * 60)
-        print(f"   • Error: {e}")
-        print("   • Check your configuration and try again")
+        print(f"❌ Error running pipeline: {e}")
+        return
+
+    print("=" * 60)
+    print("Thank you for using the AI-Powered Concall Summarizer!")
+    print("For best results, review and adjust the configuration in config.py")
+    print("=" * 60)
 
 
+# This line ensures that the main() function will be called when the script is run directly.
 if __name__ == "__main__":
     main()
