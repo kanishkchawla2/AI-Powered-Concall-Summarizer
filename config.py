@@ -6,11 +6,16 @@ import os
 class Config:
     """Configuration settings for the Stock Analysis Pipeline"""
     
-    # Gemini API Keys - Load from environment variable (comma-separated)
-    GEMINI_API_KEYS = [k.strip() for k in os.getenv("GEMINI_API_KEYS", "").split(",") if k.strip()]
+    # Gemini API Keys (set directly here)
+    # Example: ["your-gemini-key-1", "your-gemini-key-2"]
+    GEMINI_API_KEYS = [
+        "your-gemini-api-key-1",
+        "your-gemini-api-key-2"
+    ]
     
     # File paths
     STOCK_LIST_FILE = "stock_list.xlsx"
+    SUBSET_STOCK_LIST_FILE = "subset_stock_list.xlsx"
     FINAL_OUTPUT_FILE = "Pipeline_Final_Summaries.csv"
     TEMP_FOLDER = "temp"
     TEMP_FILE_PREFIX = "temp/Pipeline_Temp_Summary_Batch_"
@@ -67,7 +72,7 @@ class Config:
         """Validate configuration settings"""
         issues = []
         
-        if not cls.GEMINI_API_KEYS or all(not key.strip() for key in cls.GEMINI_API_KEYS):
+        if not cls.GEMINI_API_KEYS or all(not str(key).strip() for key in cls.GEMINI_API_KEYS):
             issues.append("No valid Gemini API keys configured")
         
         if cls.DEFAULT_BATCH_SIZE <= 0:
@@ -88,6 +93,7 @@ class Config:
         print("-" * 40)
         print(f"   • API Keys: {len(cls.GEMINI_API_KEYS)} configured")
         print(f"   • Stock list file: {cls.STOCK_LIST_FILE}")
+        print(f"   • Subset stock list file: {cls.SUBSET_STOCK_LIST_FILE}")
         print(f"   • Default docs per stock: {cls.DEFAULT_DOCS_PER_STOCK}")
         print(f"   • Default batch size: {cls.DEFAULT_BATCH_SIZE}")
         print(f"   • Stocks per API key: {cls.STOCKS_PER_API_KEY}")

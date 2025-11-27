@@ -146,12 +146,15 @@ class StockAnalysisPipeline:
             print("❌ No stocks found in stock list")
             return None
 
-        # If a subset is provided, intersect with available stocks (case-insensitive)
-        if stock_subset is not None:
+        # If a subset is requested, read from Config.SUBSET_STOCK_LIST_FILE
+        if stock_subset is True:
             try:
-                # Normalize to lowercase for comparison
+                subset_df = pd.read_excel(Config.SUBSET_STOCK_LIST_FILE)
+                if 'Stock' not in subset_df.columns:
+                    print("❌ Subset file must contain a 'Stock' column. Aborting.")
+                    return None
+                desired = [str(s).strip().lower() for s in subset_df['Stock'].dropna().tolist() if str(s).strip()]
                 base_set = set([str(s).strip().lower() for s in stock_list if str(s).strip()])
-                desired = [str(s).strip().lower() for s in stock_subset if str(s).strip()]
                 filtered = [s for s in desired if s in base_set]
                 print(f"🔎 Applying subset filter: requested={len(desired)}, matched={len(filtered)}")
                 if not filtered:
@@ -159,7 +162,7 @@ class StockAnalysisPipeline:
                     return None
                 stock_list = filtered
             except Exception as e:
-                print(f"⚠️ Error applying stock subset: {e}")
+                print(f"❌ Failed to read subset file {Config.SUBSET_STOCK_LIST_FILE}: {e}")
                 return None
         
         # Debug info
@@ -438,24 +441,25 @@ def main():
         mode_choice = input("Choose processing mode (1/2, default=1): ").strip()
         check_existing = mode_choice != "2"
 
-        # Ask whether to process all stocks or a subset from an Excel file
+        # Ask whether to process all stocks or a subset from the default subset file in config
         print("\n📋 STOCK SELECTION MODE:")
         print("   A. All stocks from main list")
-        print("   B. Only stocks listed in an Excel file (must have a 'Stock' column)")
+        print("   B. Only stocks listed in subset file (config.SUBSET_STOCK_LIST_FILE)")
         stock_mode = input("Choose stock selection (A/B, default=A): ").strip().upper()
-        subset_file = None
         subset_list = None
         if stock_mode == "B":
-            subset_file = input("📄 Enter path to Excel file with a 'Stock' column: ").strip()
             try:
-                tmp_df = pd.read_excel(subset_file)
+                if not os.path.exists(Config.SUBSET_STOCK_LIST_FILE):
+                    print(f"❌ Subset file not found: {Config.SUBSET_STOCK_LIST_FILE}")
+                    return
+                tmp_df = pd.read_excel(Config.SUBSET_STOCK_LIST_FILE)
                 if 'Stock' not in tmp_df.columns:
-                    print("❌ Excel file must contain a 'Stock' column. Aborting.")
+                    print("❌ Subset file must contain a 'Stock' column. Aborting.")
                     return
                 subset_list = tmp_df['Stock'].dropna().tolist()
-                print(f"🔎 Loaded {len(subset_list)} stocks from {subset_file}")
+                print(f"🔎 Loaded {len(subset_list)} stocks from {Config.SUBSET_STOCK_LIST_FILE}")
             except Exception as e:
-                print(f"❌ Failed to read subset file: {e}")
+                print(f"❌ Failed to read subset file {Config.SUBSET_STOCK_LIST_FILE}: {e}")
                 return
         
         user_input = input(f"📄 Number of recent documents per stock (default={Config.DEFAULT_DOCS_PER_STOCK}): ")
@@ -528,7 +532,7 @@ def main():
             print(results.sample(sample_size, random_state=42).to_string(index=False))
             
             # Save final results to CSV
-            output_file = Config.OUTPUT_FILE
+            output_file = Config.FINAL_OUTPUT_FILE
             results.to_csv(output_file, index=False)
             print(f"💾 Final results saved to: {output_file}")
         else:
